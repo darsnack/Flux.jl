@@ -172,7 +172,7 @@ end
 (a::Diagonal)(x) = a.α .* x .+ a.β
 
 function Base.show(io::IO, l::Diagonal)
-  print(io, "Diagonal(", length(l.α), ")")
+  print(io, "Diagonal(", size(l.α), ")")
 end
 
 """
