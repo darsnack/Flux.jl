@@ -23,6 +23,7 @@ include("optimise/Optimise.jl")
 using .Optimise
 using .Optimise: @epochs
 using .Optimise: skip
+export Schedule
 export Descent, ADAM, Momentum, Nesterov, RMSProp,
   ADAGrad, AdaMax, ADADelta, AMSGrad, NADAM, OADAM,
   ADAMW, RADAM, AdaBelief, InvDecay, ExpDecay,

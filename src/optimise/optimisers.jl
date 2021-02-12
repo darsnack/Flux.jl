@@ -1,13 +1,16 @@
 using Zygote: Params
 
-Optimisers.init(o, xs::Params) = [init(o, x) for x in xs]
+Optimisers.state(o, xs::Params) = [state(o, x) for x in xs]
 
-function Optimisers.update!(o, xs::Params, gs, states)
+function Optimisers.update(o, xs::Params, gs, states)
+  new_states = []
   for (i, (x, s)) in enumerate(zip(xs, states))
-    _, states[i] = update!(o, x, gs[x], s)
+    x̄, s̄ = update(o, x, gs[x], s)
+    xs[x] .= x̄
+    push!(new_state, s̄)
   end
 
-  return xs, states
+  return xs, new_states
 end
 
 # """

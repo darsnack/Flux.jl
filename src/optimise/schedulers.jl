@@ -1,49 +1,38 @@
 """
-    Scheduler{T<:ParameterSchedulers.AbstractSchedule, O, F}
-    Scheduler(schedule::ParameterSchedulers.AbstractSchedule, opt, update_func)
-    Scheduler(schedule::ParameterSchedulers.AbstractSchedule, opt;
-                   update_func = (o, s) -> (o.eta = s))
+    Scheduler{T<:ParameterSchedulers.AbstractSchedule, O}
+    Scheduler(schedule::ParameterSchedulers.AbstractSchedule, opt)
 
-Wrap a `schedule` and `opt` together into a `Scheduler`.
+Wrap a `schedule` and optimizer together into a `Scheduler`.
 The `schedule` is iterated each time the optimizer updates the gradients.
 The `Scheduler` can be used anywhere a Flux optimizer is used.
 
-The keyword argument constructor sets `update_func(opt, s)`
-to schedule the learning rate of `opt` to `s` on every iteration.
-You can update any field of `opt` by passing your own `update_func`.
-*Note: [`ADADelta`](@ref) does not have a learning rate,
-       so there is no default `update_func`*
+`opt` can be either:
+- an optimizer (the learning rate will be the scheduled parameter)
+- a function that accepts the current parameter value and returns a new optimizer
 
-# Arguments
-- `schedule::ParameterSchedulers.AbstractSchedule`: the schedule to use
-- `opt`: a Flux optimizer
-- `update_func`: a mutating function of with inputs `(optim, param)`
-                 that updates `optim` based on the current `param` value
+# Examples
+```jldoctest
+julia> opt = Momentum();
+
+julia> schedule = Schedule.Exp(λ = 0.01, γ = 0.5);
+
+julia> sopt = Schedule.Scheduler(schedule, opt)
+
+julia> 
 """
-mutable struct Scheduler{T<:AbstractSchedule, O, F}
+mutable struct Scheduler{T<:AbstractSchedule, O}
   schedule::T
   optim::O
-  update_func::F
 end
 
-for Opt in (Descent, ADAM, Momentum, Nesterov, RMSProp,
-            ADAGrad, AdaMax, AMSGrad, NADAM,
-            RADAM, OADAM, AdaBelief)
-  @eval begin
-  Scheduler(schedule::AbstractSchedule, opt::$Opt; update_func = (o, s) -> (o.eta = s)) =
-    Scheduler(schedule, opt, update_func)
-  end
-end
+Optimise.Optimisers.init(o::Scheduler, x::AbstractArray) = (t = 1, optim = init(o.optim, x))
 
-Optimise.Optimisers.init(o::Scheduler, x::AbstractArray) =
-  (t = 1, optim = init(o.optim, x))
-
-function Optimise.Optimisers.apply!(opt::Scheduler, x, dx, state)
+function Optimise.Optimisers.apply(opt::Scheduler, x, dx, state)
   # set param
-  opt.update_func(opt.optim, opt.schedule[state.t])
+  o = opt.optim(opt.schedule[state.t])
 
   # do normal apply
-  dx, s = Optimise.Optimisers.apply!(opt.optim, x, dx, state.optim)
+  dx, s = Optimise.Optimisers.apply(o, x, dx, state.optim)
 
   return dx, (t = t + 1, optim = s)
 end

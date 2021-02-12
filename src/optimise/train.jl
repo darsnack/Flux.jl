@@ -68,13 +68,13 @@ Multiple optimisers and callbacks can be passed to `opt` and `cb` as arrays.
 function train!(loss, ps, data, opt; cb = () -> ())
   ps = Params(ps)
   cb = runall(cb)
-  st = init(opt, ps)
+  st = state(opt, ps)
   @progress for d in data
     try
       gs = gradient(ps) do
         loss(batchmemaybe(d)...)
       end
-      ps, st = update!(opt, ps, gs, st)
+      ps, st = update(opt, ps, gs, st)
       cb()
     catch ex
       if ex isa StopException
